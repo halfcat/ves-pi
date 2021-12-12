@@ -48,10 +48,13 @@ class Gps:
 			return -1
 		return self.gpsd.get_current().alt
 
+	def get_current(self):
+		return self.gpsd.get_current()
 
 if __name__ == '__main__':
+	gps = Gps()
 	# Get gps position
-	packet = gpsd.get_current()
+	packet = gps.get_current()
 
 	# See the inline docs for GpsResponse for the available data
 	print(" ************ PROPERTIES ************* ")

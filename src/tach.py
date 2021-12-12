@@ -5,9 +5,9 @@ import time
 
 class Tach:
 	# GPIO 16 is pin #36 when using physical board pin numbers
-	#tach_pin = 36
-	# 16 is the Broadcom numbering scheme
-	tach_pin = 16
+	#tach_pin = 
+	# 12 is the Broadcom numbering scheme
+	tach_pin = 12
 	c = 0
 
 	GPIO = None
@@ -36,7 +36,7 @@ class Tach:
 
 	def __init__(self):
 		"""Set up the GPIO pin and register a callback function for spark detection"""
-		GPIO.setwarnings(False) # Ignore warning for now
+#		GPIO.setwarnings(False) # Ignore warning for now
 		print(f"Using {GPIO.getmode()} mode for pin numbering")
 		GPIO.setmode(GPIO.BCM) # Use physical pin numbering
 		print(f"Mode set.  Using {GPIO.getmode()} mode for pin numbering")
@@ -57,15 +57,15 @@ class Tach:
 
 if __name__ == '__main__':
 	tach = Tach()
-try:
-	while True:
-		rpms = tach.rpms()
-		if rpms > 0:
-			print(f"{rpms:.0f} RPM's")
-		time.sleep(1)
-except:
-	print( "Shutting down")
-	time.sleep(2)
-	GPIO.remove_event_detect(tach.tach_pin)
-	GPIO.cleanup()
-	print(f"Max RPM's: {tach.max_rpms:.0f}")
+	try:
+		while True:
+			rpms = tach.rpms()
+			if rpms > 0:
+				print(f"{rpms:.0f} RPM's")
+			time.sleep(1)
+	except:
+		print( "Shutting down")
+		time.sleep(2)
+		GPIO.remove_event_detect(tach.tach_pin)
+		GPIO.cleanup()
+		print(f"Max RPM's: {tach.max_rpms:.0f}")

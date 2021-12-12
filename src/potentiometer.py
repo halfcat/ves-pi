@@ -38,14 +38,38 @@ class Potentiometer():
 		return self.pot.value
 
 	def __str__(self):
-		return f"{self.value()} / {self.pot_percent()}%"
+		return f"{self.value()} / {self.percent()}%"
 
 # kick off a test loop if this file is executed directly
 if __name__ == '__main__':
-	pot0 = Potentiometer(0)
-	pot1 = Potentiometer(1)
-	pot2 = Potentiometer(2)
-	pot3 = Potentiometer(3)
+	try:
+		pot0 = Potentiometer(0)
+	except ValueError as e:
+		pot0 = 'n/a'
+		print("pot0 not found")
+
+	try:
+		pot1 = Potentiometer(1)
+	except ValueError as e:
+		pot1 = 'n/a'
+		print("pot1 not found")
+
+	try:
+		pot2 = Potentiometer(2)
+	except ValueError as e:
+		pot2 = 'n/a'
+		print("pot2 not found")
+
+	try:
+		pot3 = Potentiometer(3)
+	except ValueError as e:
+		pot3 = 'n/a'
+		print("pot3 not found")
+
+
+#	pot1 = Potentiometer(1)
+#	pot2 = Potentiometer(2)
+#	pot3 = Potentiometer(3)
 
 	while True:
 		print(f"{pot0} || {pot1} || {pot2} || {pot3}")

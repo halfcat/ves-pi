@@ -17,11 +17,14 @@
  '''
 
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+import board
 import logging
 import time
 import argparse
 import json
 import math
+
+from temp_sensor import TempSensor
 
 AllowedActions = ['both', 'publish', 'subscribe']
 
@@ -142,13 +145,6 @@ class PubSub:
 		self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 seo
 		self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 
-		# Connect AWS IoT
-#		print("Connecting...")
-#		self.myAWSIoTMQTTClient.connect()
-		#print("Subscribing to topic %s...", self.topic)
-		#self.subscribe('ves-pi/63GL')
-		#self.myAWSIoTMQTTClient.subscribe(self.topic, 1 customCallback )
-
 	def connect(self):
 		self.myAWSIoTMQTTClient.connect()
 
@@ -184,7 +180,6 @@ class PubSub:
 		return math.trunc(number * factor) / factor
 
 if __name__ == "__main__":
-	loopCount = 0
 	ps = PubSub(topic='ves-pi/63GL')
 	print("Connecting...")
 	ps.connect()
@@ -195,40 +190,73 @@ if __name__ == "__main__":
 		print("Subscribed.")
 
 	# create the Gear 
+	logging.info("Initializing gear position sensor")
 	from gear import Gear
 	gear = Gear()
 
 	# Create the Throttle 
+	logging.info("Initializing throttle position sensor")
 	from throttle import Throttle
 	throttle = Throttle()
 
 	# Create the CHT 
-	from cht import Cht
-	cht = Cht()
+	logging.info("Initializing Cylinder Head Temp (CHT)")
+	from temp_sensor import TempSensor
+	cht = TempSensor(board.D5)
+
+	# Create the CHT 
+	logging.info("Initializing Exhaust Gas Temp (EGT)")
+	try:
+		pass
+		egt = TempSensor(board.D6)
+	except RuntimeError as e:
+		logging.error("Unable to initialize EGT")
+		logging.error(e)
 
 	# Create the speed & position (GPS) 
+	logging.info("Initializing GPS")
 	from gps import Gps
 	gps = Gps()
 
 	# Create the Tach
+	logging.info("Initializing Tachometer")
 	from tach import Tach
 	tach = Tach()
 
+	# Create the Accelerometer
+	logging.info("Initializing Accelerometer")
+	from accel import Accelerometer
+	accelerometer = Accelerometer()
+
+	# Create the clutch
+	from clutch import Clutch
+	clutch = Clutch()
+
+
+
 	print(f'Publishing to topic {ps.topic}')
-	while loopCount < 10000:
+	loopCount = 0
+	while loopCount < 10:
 		message = { 'device': '63GL', 
 			'payload': { 
 				'timestamp': ps.truncate(time.time(), 3), 
 				'gear': gear.gear(), 
 				'cht': cht.temperature(), 
+				'egt': egt.temperature(), 
 				'rpms': tach.rpms(), 
 				'throttle': throttle.percent(), 
+				'clutch': clutch.in_gear,
 				'position': {
 					'lat': gps.latitude(), 
 					'long': gps.longitude(), 
 					'altitude': gps.altitude() 
 				},
-				'speed': gps.speed() 
+				'speed': gps.speed(),
+				'acceleration': {
+					'x': accelerometer.x(),
+					'y': accelerometer.y(),
+					'z': accelerometer.z()
+				}
 			} 
 		}
 		ps.publish(message)
@@ -236,3 +264,4 @@ if __name__ == "__main__":
 		loopCount += 1
 		#time.sleep(.2)
 		time.sleep(2)
+	print
