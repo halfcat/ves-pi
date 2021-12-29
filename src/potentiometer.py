@@ -72,5 +72,6 @@ if __name__ == '__main__':
 #	pot3 = Potentiometer(3)
 
 	while True:
-		print(f"{pot0} || {pot1} || {pot2} || {pot3}")
+		#print(f"{pot0} || {pot1} || {pot2} || {pot3}")
+		print(f"{pot0} || {pot1}")
 		time.sleep(1)

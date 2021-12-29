@@ -8,14 +8,19 @@ from potentiometer import Potentiometer
 
 
 class Gear(Potentiometer):
-	GEAR_CHANNEL = 1
+	GEAR_CHANNEL = 0
 
 	gear_range = { 
-		'N': { 'min':  4000, 'max':  7000 },
-		1: { 'min':     0, 'max':  3000 },
-		2: { 'min':  8000, 'max': 11000 },
-		3: { 'min': 12000, 'max': 15000 },
-		4: { 'min': 16000, 'max': 19000 }
+		# 1st is ~19312 / 79%
+		'1': { 'min':     19000, 'max':  19600 },
+		# N is ~ 20576 / 84%
+	 	'N': { 'min':  20000, 'max':  21000 },
+		# 2nd is ~ 21648 / 89%
+		'2': { 'min':  21300, 'max': 22000 },
+		# 3rd is ~ 23072 / 95%
+		'3': { 'min': 22700, 'max': 24000 },
+		# 4th is 25376 /100%
+		'4': { 'min': 25000, 'max': 26000 }
 	}
 	def __init__(self):
 		super().__init__(self.GEAR_CHANNEL)

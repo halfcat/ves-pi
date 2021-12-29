@@ -8,6 +8,13 @@ class Accelerometer():
 
     _accelerometer = None
 
+    _x_offset = .2
+    _y_offset = -.3
+    _z_offset = -9.0
+
+
+
+
     def __init__(self):
         i2c = board.I2C()
 
@@ -17,13 +24,13 @@ class Accelerometer():
         return self._accelerometer.acceleration
 
     def x(self) -> float:
-        return self._accelerometer.acceleration[0]
+        return self._accelerometer.acceleration[0] + self._x_offset
 
     def y(self) -> float:
-        return self._accelerometer.acceleration[1]
+        return self._accelerometer.acceleration[1] + self._y_offset
 
     def z(self) -> float:
-        return self._accelerometer.acceleration[2]
+        return self._accelerometer.acceleration[2] + self._z_offset
     
 if __name__ == '__main__':
     accelerometer = Accelerometer()

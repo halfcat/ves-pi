@@ -236,10 +236,11 @@ if __name__ == "__main__":
 
 	print(f'Publishing to topic {ps.topic}')
 	loopCount = 0
-	while loopCount < 10:
+	#while loopCount < 1000:
+	while True:
 		message = { 'device': '63GL', 
 			'payload': { 
-				'timestamp': ps.truncate(time.time(), 3), 
+				'timestamp': str(ps.truncate(time.time()*1000)), 
 				'gear': gear.gear(), 
 				'cht': cht.temperature(), 
 				'egt': egt.temperature(), 
@@ -249,7 +250,7 @@ if __name__ == "__main__":
 				'position': {
 					'lat': gps.latitude(), 
 					'long': gps.longitude(), 
-					'altitude': gps.altitude() 
+					'altitude': gps.altitude()
 				},
 				'speed': gps.speed(),
 				'acceleration': {
@@ -263,5 +264,5 @@ if __name__ == "__main__":
 		print( "Published topic "+ps.topic + " " + str(message) )
 		loopCount += 1
 		#time.sleep(.2)
-		time.sleep(2)
+		time.sleep(.2)
 	print

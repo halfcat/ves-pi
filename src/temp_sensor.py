@@ -3,7 +3,6 @@
 # current temperature
 
 import board
-#import digitalio
 import adafruit_max31855
 from digitalio import DigitalInOut
 
@@ -17,16 +16,21 @@ class TempSensor:
 	#_gpio_pin = board.D5
 	_gpio_pin = board.D6
 
+
 	def __init__(self, gpio_pin, force_reinit=False):
 		if self.sensor == None or force_reinit == True:
 			self.sensor = self.init_sensor(gpio_pin)
+
+		self._first = True
 
 	# get the temperature in either Centigrade (units='C') or Fahrenheit (default)
 	def temperature(self, units='F'):
 		try:
 			temp = self.sensor.temperature
 		except RuntimeError as e:
-			print(e)
+			if self._first:
+				print(e)
+				self._first = False
 			temp = 0
 		if units == 'C':
 			return temp
@@ -34,7 +38,7 @@ class TempSensor:
 			return temp * 9 / 5 + 32
 
 	def __str__(self):
-		return sensor.temperature('F')
+		return self.temperature('F')
 
 	# initialize the sensor
 	def init_sensor(self, gpio_pin): # -> adafruit_max31855:
@@ -60,16 +64,49 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
-	if args.egt:
-		gpio_pin = board.D6
-	else:
-		gpio_pin = board.D5
+	if not args.egt or args.cht:
+		args.egt = True
+		args.cht = True
 
-	ts = TempSensor(gpio_pin)
-	print(f"Using GPIO {ts._gpio_pin}")
+	if args.egt:
+		print("Monitoring EGT")
+		#gpio_pin = board.D6
+		ts_egt = TempSensor(board.D6)
+	else:
+		ts_egt = None
+		egt_temp = None
+
+	if args.cht:
+		print("Monitoring CHT")
+		#gpio_pin = board.D5
+		ts_cht = TempSensor(board.D5)
+	else:
+		ts_cht = None
+		cht_temp = ''
+
 	while True:
+		if ts_cht:
+			cht_temp = ts_cht.temperature()
+		if ts_egt:
+			egt_temp = ts_egt.temperature()
+
+		out = ""
+		if cht_temp > 32 or egt_temp > 32:
+			if ts_cht:
+				if cht_temp == 32:
+					cht_temp = '-'
+				out = out + f"CHT temp: {cht_temp}"
+			if ts_cht and ts_egt:
+				out = out + "\t\t"
+			if ts_egt:
+				if egt_temp == 32:
+					egt_temp = '-'
+				out = out + f"EGT temp: {egt_temp}"
+			print(out)
+		"""		
 		if ts.temperature() > 32:
 			print(f"It's {ts.temperature()} F degrees.")
 		else:
 			print(".")
+		"""
 		time.sleep(1)
