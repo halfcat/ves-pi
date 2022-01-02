@@ -74,9 +74,9 @@ class PubSub:
 		if self.args.rootCAPath:
 			self.rootCAPath = self.args.rootCAPath
 		if self.args.certificatePath:
-		    self.certificatePath = self.args.certificatePath
+			self.certificatePath = self.args.certificatePath
 		if self.args.privateKeyPath:
-		    self.privateKeyPath = self.args.privateKeyPath
+			self.privateKeyPath = self.args.privateKeyPath
 		if self.args.port:
 			self.port = self.args.port
 		self.useWebsocket = self.args.useWebsocket
@@ -126,11 +126,13 @@ class PubSub:
 		
 		if self.useWebsocket:
 			print("Using WebSocket")
+			logging.info("Using WebSocket")
 			self.myAWSIoTMQTTClient = AWSIoTMQTTClient(self.clientId, useWebsocket=True)
 			self.myAWSIoTMQTTClient.configureEndpoint(self.host, self.port)
 			self.myAWSIoTMQTTClient.configureCredentials(self.rootCAPath)
 		else:
 			print("Using MQTT")
+			logging.info("Using MQTT")
 			print("clientId:", self.clientId)
 			self.myAWSIoTMQTTClient = AWSIoTMQTTClient(self.clientId)
 			#print(f"Endpoint: {self.host}:{self.port}")
@@ -164,7 +166,7 @@ class PubSub:
 			self.myAWSIoTMQTTClient.connect()
 			self.myAWSIoTMQTTClient.subscribe(self.topic)
 		
-
+	'''
 	def truncate(self, number, decimals=0):
 		"""
 		Returns a value truncated to a specific number of decimal places.
@@ -178,6 +180,7 @@ class PubSub:
 
 		factor = 10.0 ** decimals
 		return math.trunc(number * factor) / factor
+	'''
 
 if __name__ == "__main__":
 	ps = PubSub(topic='ves-pi/63GL')
@@ -207,7 +210,6 @@ if __name__ == "__main__":
 	# Create the CHT 
 	logging.info("Initializing Exhaust Gas Temp (EGT)")
 	try:
-		pass
 		egt = TempSensor(board.D6)
 	except RuntimeError as e:
 		logging.error("Unable to initialize EGT")
@@ -235,12 +237,13 @@ if __name__ == "__main__":
 
 
 	print(f'Publishing to topic {ps.topic}')
-	loopCount = 0
+	logging.info(f'Publishing to topic {ps.topic}')
+	#loopCount = 0
 	#while loopCount < 1000:
 	while True:
 		message = { 'device': '63GL', 
 			'payload': { 
-				'timestamp': str(ps.truncate(time.time()*1000)), 
+				'timestamp': str(math.trunc(time.time()*1000)), 
 				'gear': gear.gear(), 
 				'cht': cht.temperature(), 
 				'egt': egt.temperature(), 
@@ -261,8 +264,8 @@ if __name__ == "__main__":
 			} 
 		}
 		ps.publish(message)
-		print( "Published topic "+ps.topic + " " + str(message) )
-		loopCount += 1
+		#print( "Published topic "+ps.topic + " " + str(message) )
+		#loopCount += 1
 		#time.sleep(.2)
 		time.sleep(.2)
 	print
