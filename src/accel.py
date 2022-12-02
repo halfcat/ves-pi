@@ -8,29 +8,39 @@ class Accelerometer():
 
     _accelerometer = None
 
+    _initialized = False
     _x_offset = .2
     _y_offset = -.3
     _z_offset = -9.0
 
-
-
-
     def __init__(self):
-        i2c = board.I2C()
-
-        self._accelerometer = adafruit_adxl34x.ADXL343(i2c)
+        try:
+            i2c = board.I2C()
+            self._accelerometer = adafruit_adxl34x.ADXL343(i2c)
+            self._initialized = True
+        except ValueError as ve:
+            print("Acclerometer not detected")
 
     def acceleration(self):
         return self._accelerometer.acceleration
 
     def x(self) -> float:
-        return self._accelerometer.acceleration[0] + self._x_offset
+        if self._accelerometer:
+            return self._accelerometer.acceleration[0] + self._x_offset
+        else:
+            return 0
 
     def y(self) -> float:
-        return self._accelerometer.acceleration[1] + self._y_offset
+        if self._accelerometer:
+            return self._accelerometer.acceleration[1] + self._y_offset
+        else:
+            return 0
 
     def z(self) -> float:
-        return self._accelerometer.acceleration[2] + self._z_offset
+        if self._accelerometer:
+            return self._accelerometer.acceleration[2] + self._z_offset
+        else:
+            return 0
     
 if __name__ == '__main__':
     accelerometer = Accelerometer()

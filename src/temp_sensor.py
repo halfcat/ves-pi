@@ -2,6 +2,7 @@
 # initialize the temperature sensor and provide a temperature() method to get the
 # current temperature
 
+import logging
 import board
 import adafruit_max31855
 from digitalio import DigitalInOut
@@ -51,6 +52,7 @@ class TempSensor:
 		# Chip select
 		cs = DigitalInOut(self._gpio_pin)
 		self.sensor = adafruit_max31855.MAX31855(spi, cs)
+		logging.info(f"Sensor on GPIO {gpio_pin} initialized")
 		return self.sensor
 
 

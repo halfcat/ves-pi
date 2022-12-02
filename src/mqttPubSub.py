@@ -24,16 +24,13 @@ import argparse
 import json
 import math
 
-from temp_sensor import TempSensor
 
 AllowedActions = ['both', 'publish', 'subscribe']
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
-    print("Received a new message: ")
+    print(f"Received a new message from topic {message.topic}: ")
     print(message.payload)
-    print("from topic: ")
-    print(message.topic)
     print("--------------\n\n")
 
 class PubSub:
@@ -46,6 +43,7 @@ class PubSub:
 	certificatePath = '/home/pi/63GL/63GL.cert.pem'
 	privateKeyPath = '/home/pi/63GL/63GL.private.key'
 	clientId = '63GL'
+	is_online = False
 
 	def __init__(self,topic=None):
 		self.topic = topic
@@ -74,9 +72,9 @@ class PubSub:
 		if self.args.rootCAPath:
 			self.rootCAPath = self.args.rootCAPath
 		if self.args.certificatePath:
-		    self.certificatePath = self.args.certificatePath
+			self.certificatePath = self.args.certificatePath
 		if self.args.privateKeyPath:
-		    self.privateKeyPath = self.args.privateKeyPath
+			self.privateKeyPath = self.args.privateKeyPath
 		if self.args.port:
 			self.port = self.args.port
 		self.useWebsocket = self.args.useWebsocket
@@ -145,13 +143,24 @@ class PubSub:
 		self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 seo
 		self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 
+		self.myAWSIoTMQTTClient.onOnline = online_event_callback
+		self.myAWSIoTMQTTClient.onOffline = offline_event_callback
+
+	def online_event_callback(self):
+		self.is_online = True
+
+	def offline_event_callback(self):
+		print("went offline :(")
+		self.is_online = False
+		logging.warn("went offline :(")
+
 	def connect(self):
 		self.myAWSIoTMQTTClient.connect()
 
 	def subscribe(self, topic):
 		#if args.mode == 'both' or args.mode == 'subscribe':
 		self.myAWSIoTMQTTClient.subscribe(topic, 1, customCallback)
-		time.sleep(2)
+		#time.sleep(2)
 
 	#publish a message consisting of a dict which will be converted into a json document for sending
 	def publish(self, message={}):
@@ -161,26 +170,13 @@ class PubSub:
 			self.myAWSIoTMQTTClient.publish(self.topic, messageJson, 1)
 		else:
 			print("No connection...reconnecting...")
+			logging.info("No connection...reconnecting...")
 			self.myAWSIoTMQTTClient.connect()
-			self.myAWSIoTMQTTClient.subscribe(self.topic)
+		#	self.myAWSIoTMQTTClient.subscribe(self.topic)
 		
-
-	def truncate(self, number, decimals=0):
-		"""
-		Returns a value truncated to a specific number of decimal places.
-		"""
-		if not isinstance(decimals, int):
-			raise TypeError("decimal places must be an integer.")
-		elif decimals < 0:
-			raise ValueError("decimal places has to be 0 or more.")
-		elif decimals == 0:
-			return math.trunc(number)
-
-		factor = 10.0 ** decimals
-		return math.trunc(number * factor) / factor
-
 if __name__ == "__main__":
 	ps = PubSub(topic='ves-pi/63GL')
+	ps.configure_logger()
 	print("Connecting...")
 	ps.connect()
 	print("Connected.")
@@ -202,12 +198,15 @@ if __name__ == "__main__":
 	# Create the CHT 
 	logging.info("Initializing Cylinder Head Temp (CHT)")
 	from temp_sensor import TempSensor
-	cht = TempSensor(board.D5)
+	try:
+		cht = TempSensor(board.D5)
+	except RuntimeError as e:
+		logging.error("Unable to initialize CHT")
+		logging.error(e)
 
 	# Create the CHT 
 	logging.info("Initializing Exhaust Gas Temp (EGT)")
 	try:
-		pass
 		egt = TempSensor(board.D6)
 	except RuntimeError as e:
 		logging.error("Unable to initialize EGT")
@@ -229,10 +228,9 @@ if __name__ == "__main__":
 	accelerometer = Accelerometer()
 
 	# Create the clutch
+	# TODO:  Install a clutch sensor
 	from clutch import Clutch
 	clutch = Clutch()
-
-
 
 	print(f'Publishing to topic {ps.topic}')
 	loopCount = 0
@@ -240,7 +238,7 @@ if __name__ == "__main__":
 	while True:
 		message = { 'device': '63GL', 
 			'payload': { 
-				'timestamp': str(ps.truncate(time.time()*1000)), 
+				'timestamp': str(math.trunc(time.time()*1000)), 
 				'gear': gear.gear(), 
 				'cht': cht.temperature(), 
 				'egt': egt.temperature(), 
