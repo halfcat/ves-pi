@@ -124,11 +124,13 @@ class PubSub:
 		
 		if self.useWebsocket:
 			print("Using WebSocket")
+			logging.info("Using WebSocket")
 			self.myAWSIoTMQTTClient = AWSIoTMQTTClient(self.clientId, useWebsocket=True)
 			self.myAWSIoTMQTTClient.configureEndpoint(self.host, self.port)
 			self.myAWSIoTMQTTClient.configureCredentials(self.rootCAPath)
 		else:
 			print("Using MQTT")
+			logging.info("Using MQTT")
 			print("clientId:", self.clientId)
 			self.myAWSIoTMQTTClient = AWSIoTMQTTClient(self.clientId)
 			#print(f"Endpoint: {self.host}:{self.port}")
@@ -233,7 +235,8 @@ if __name__ == "__main__":
 	clutch = Clutch()
 
 	print(f'Publishing to topic {ps.topic}')
-	loopCount = 0
+	logging.info(f'Publishing to topic {ps.topic}')
+	#loopCount = 0
 	#while loopCount < 1000:
 	while True:
 		message = { 'device': '63GL', 
@@ -259,8 +262,8 @@ if __name__ == "__main__":
 			} 
 		}
 		ps.publish(message)
-		print( "Published topic "+ps.topic + " " + str(message) )
-		loopCount += 1
+		#print( "Published topic "+ps.topic + " " + str(message) )
+		#loopCount += 1
 		#time.sleep(.2)
 		time.sleep(.2)
 	print
