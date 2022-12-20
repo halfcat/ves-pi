@@ -4,6 +4,8 @@
 import board
 import busio
 
+# Neopixels can only be on GPIO10, GPIO12, GPIO18 or GPIO21 to work! GPIO18 is the standard pin. 
+
 # Import the HT16K33 LED matrix module.
 from adafruit_ht16k33 import matrix
 
