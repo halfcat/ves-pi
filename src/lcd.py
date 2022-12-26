@@ -55,7 +55,8 @@ BLUE  = [0, 0, 100]
 OFF   = [0, 0, 0]
 
 
-def get_color(temperature: float, min_temp=100, max_temp=325):
+def get_color(temperature: float, min_temp=100, max_temp=325)->list:
+    '''Get a list with an RGB set in it for gradating from min_tmp to max_temp'''
     red = 0
     green = 0
     blue = 0
@@ -79,11 +80,11 @@ def get_color(temperature: float, min_temp=100, max_temp=325):
 
     return [red, green, blue]
 
-
 global temp
 temp = 250
 
 def temp_generator(max_temp=350, min_temp=60, temp_delta=10):
+    '''Dummy temperatue generator'''
     global temp
     while True:
         temp = temp + temp_delta
@@ -109,8 +110,6 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-
-
 lcd.clear()
 lcd.color = OFF
 # Set LCD color to red
@@ -120,7 +119,7 @@ lcd.color = RED  #|---+----|----+----|
 lcd.message =  "\n The Ves-Pi Project" 
 time.sleep(1)
 
-
+# blink three times
 lcd.color = OFF
 time.sleep(.25)
 lcd.color = RED
@@ -129,31 +128,37 @@ lcd.color = OFF
 time.sleep(.25)
 lcd.color = RED
 time.sleep(.25)
-
-
 lcd.clear()
 
+# initialize and start the temp generator thread
 temp = 80
 temp_generator_thread = threading.Thread(target=temp_generator, args=(400,60,10,))
 temp_generator_thread.start()
 
 rpms = 8200
 
-
 lcd.message =   f"RPMs {rpms:5}  MPH:   0\nThrot:  0%  Gear:  N\nCHT:   {temp:3}  EGT:  77\nx:-0.4 y:-1.1 z:-0.0"
 
 
 blink = True
+last_color = [0,0,0]
 while True:
 #                |---+----|----+----| |---+----|----+----|  |---+----|----+----|  |---+----|----+----|
-    lcd.cursor_position(7, 2)
-    lcd.message=f"{temp:3}"
+    lcd.message =   f"RPMs {rpms:5}  MPH:   0\nThrot:  0%  Gear:  N\nCHT:   {temp:3}  EGT:  77\nx:-0.4 y:-1.1 z:-0.0"
+    #lcd.cursor_position(7, 2)
+    #lcd.message=f"{temp:3}"
+
     lcd.color = get_color(temp)
-    if temp >= 350 and blink:
-        lcd.color = OFF
-    else:
-        lcd.color = get_color(temp)
-    blink = not blink
+#    if temp >= 350 and blink:
+#        lcd.color = OFF
+#    else:
+#        lcd.color = get_color(temp)
+    color = get_color(temp)
+    if color != last_color:
+        lcd.color = color
+        print(color)
+    last_color = color
+#    blink = not blink
 
     time.sleep(.25)
 
@@ -168,68 +173,3 @@ def temp_generator(max_temp=375, min_temp=60):
 
         if temp > max_temp or temp <= min_temp:
             temp_delta *= -1
-
-
-
-
-
-
-
-
-"""
-    # Wait 5s
-    time.sleep(30)
-
-    # Set LCD color to blue
-    lcd.color = [0, 100, 0]
-    time.sleep(1)
-    # Set LCD color to green
-    lcd.color = [0, 0, 100]
-    time.sleep(1)
-    # Set LCD color to purple
-    lcd.color = [50, 0, 50]
-    time.sleep(1)
-    lcd.clear()
-
-
-
-
-    # Print two line message right to left
-    lcd.text_direction = lcd.RIGHT_TO_LEFT
-    lcd.message = "Hello\nCircuitPython"
-    # Wait 5s
-    time.sleep(5)
-
-    # Return text direction to left to right
-    lcd.text_direction = lcd.LEFT_TO_RIGHT
-
-    # Display cursor
-    lcd.clear()
-    lcd.cursor = True
-    lcd.message = "Cursor! "
-    # Wait 5s
-    time.sleep(5)
-
-    # Display blinking cursor
-    lcd.clear()
-    lcd.blink = True
-    lcd.message = "Blinky Cursor!"
-    # Wait 5s
-    time.sleep(5)
-    lcd.blink = False
-    lcd.clear()
-
-    # Create message to scroll
-    scroll_msg = "<-- Scroll"
-    lcd.message = scroll_msg
-    # Scroll to the left
-    for i in range(len(scroll_msg)):
-        time.sleep(0.5)
-        lcd.move_left()
-    lcd.clear()
-
-    # Turn off LCD backlights and clear text
-    lcd.color = [0, 0, 0]
-    lcd.clear()
-    time.sleep(1)
-"""
