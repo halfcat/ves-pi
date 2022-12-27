@@ -10,14 +10,21 @@ class Gps:
 	gpsd = None
 
 	def __init__(self):
-		self.gpsd = gps_daemon
-		self.gpsd.connect()
+		try:
+			self.gpsd = gps_daemon
+			self.gpsd.connect()
+		except Exception as e:
+			print("unable to connect to gpsd")
+			print(e)
 
 	def gps(self) -> gps_daemon:
 		return self.gpsd
 
 	def has_fix(self) -> bool:
-		return self.gpsd.get_current().mode >= 2
+		if self.gpsd:
+			return self.gpsd.get_current().mode >= 2
+		else:
+			return 0
 
 	def speed(self) -> float:
 		"""Get current speed in MPH or -1 if no GPS fix"""

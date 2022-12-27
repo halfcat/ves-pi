@@ -12,7 +12,7 @@ class Gear(Potentiometer):
 
 	gear_range = { 
 		# 1st is ~19312 / 79%
-		'1': { 'min':     19000, 'max':  19600 },
+		'1': { 'min':     19000, 'max':  20000 },
 		# N is ~ 20576 / 84%
 	 	'N': { 'min':  20000, 'max':  21000 },
 		# 2nd is ~ 21648 / 89%
