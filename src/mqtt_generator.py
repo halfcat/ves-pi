@@ -24,6 +24,7 @@ import math
 import random
 import logging
 import threading
+from dashboard import Dashboard
 
 AllowedActions = ['both', 'publish', 'subscribe']
 
@@ -332,34 +333,45 @@ if __name__ == "__main__":
         #    return self.gear
 
     m = Motor()
-
+    dashboard = None
+    try:
+        dashboard = Dashboard()
+        dashboard.start_display(0.5)
+    except Exception as e:
+        logging.warn(f"unable to initialize dashboard display\n{e}")
+    
     print(f'Publishing to topic {ps.topic}')
     loopCount = 0
     #while loopCount < 1000:
     while True:
-        message = { 'device': '63GL',
-                'payload': {
-                        'timestamp': str(math.trunc(time.time()*1000)),
-                        'gear': m.gear,
-                        'cht': m.cht(),
-                        'egt': m.egt(),
-                        'rpms': m.rpms(),
-                        'clutch_slip': m.clutch_slip(),
-                        'throttle': m.throttle(),
-                        'clutch': clutch.in_gear,
-                        'position': {
-                                'lat': gps.latitude(),
-                                'long': gps.longitude(),
-                                'altitude': gps.altitude()
-                        },
-                        'speed': m.speed(),
-                        'acceleration': {
-                                'x': accelerometer.x(),
-                                'y': accelerometer.y(),
-                                'z': accelerometer.z()
-                        }
-                }
+        payload = {
+            'timestamp': str(math.trunc(time.time()*1000)),
+            'gear': m.gear,
+            'cht': m.cht(),
+            'egt': m.egt(),
+            'rpms': m.rpms(),
+            'clutch_slip': m.clutch_slip(),
+            'throttle': m.throttle(),
+            'clutch': clutch.in_gear,
+            'position': {
+                    'lat': gps.latitude(),
+                    'long': gps.longitude(),
+                    'altitude': gps.altitude()
+            },
+            'speed': m.speed(),
+            'acceleration': {
+                    'x': accelerometer.x(),
+                    'y': accelerometer.y(),
+                    'z': accelerometer.z()
+            }
         }
+        
+        if dashboard:
+            dashboard.update(payload)
+
+        message = { 'device': '63GL',
+                'payload': payload }
+                
         ps.publish(message)
         print( "Published topic "+ps.topic + " " + str(message) )
         loopCount += 1
