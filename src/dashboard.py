@@ -1,118 +1,193 @@
-#!/usr/bin/python3
+# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
+# SPDX-License-Identifier: MIT
 
-import curses
+"""Simple test for RGB character LCD on Raspberry Pi"""
 import time
-from curses import wrapper
-
-from tach import Tach
-from gear import Gear
-from throttle import Throttle
-from cht import Cht
-from temp_sensor import TempSensor
-from gps import Gps
 import board
-from accel import Accelerometer
+import digitalio
+import pwmio
+import adafruit_character_lcd.character_lcd as characterlcd
+
+import threading
+import sys
+import signal
 
 
-# initialize sensors
-# TODO:  wrap in try/except's
-tach = Tach()
-gear = Gear()
-throttle = Throttle()
-cht = TempSensor(board.D5)
-egt = TempSensor(board.D6)
-gps = Gps()
-accel = Accelerometer()
+class Dashboard():
+    # Modify this if you have a different sized character LCD
+    lcd_columns = 20
+    lcd_rows = 4
 
-# set up curses
-stdscr = curses.initscr()
-curses.noecho()
-stdscr.nodelay(True)
-curses.cbreak()
+    # Raspberry Pi Pin Config:
+    lcd_rs = digitalio.DigitalInOut(board.D26)  # LCD pin 4
+    lcd_en = digitalio.DigitalInOut(board.D19)  # LCD pin 6
+    lcd_d7 = digitalio.DigitalInOut(board.D27)  # LCD pin 14
+    lcd_d6 = digitalio.DigitalInOut(board.D22)  # LCD pin 13
+    lcd_d5 = digitalio.DigitalInOut(board.D24)  # LCD pin 12
+    lcd_d4 = digitalio.DigitalInOut(board.D25)  # LCD pin 11
 
+    # LCD pin 5.  Determines whether to read to or write from the display.
+    #lcd_rw = digitalio.DigitalInOut( board.D4)  
+    # Not necessary if only writing to the display. Used on shield.
 
-# The number of times per second the dash refreshes
-refresh_rate = 5
-refresh_interval = 1/refresh_rate
+    red = pwmio.PWMOut(board.D21)
+    green = pwmio.PWMOut(board.D12)
+    blue = pwmio.PWMOut(board.D18)
 
-temp_iterator = 0
-last_cht = cht.temperature()
-cht_delta = 0
-last_egt = egt.temperature()
-egt_delta = 0
+    RED   = [100, 0, 0]
+    GREEN = [0, 100, 0]
+    BLUE  = [0, 0, 100]
+    OFF   = [0, 0, 0]
 
-while True:
-    stdscr.addstr(0,0,  f"RPM's: {tach.rpms():6.0f}")
-    stdscr.addstr(0,16, f"MPH:   {gps.speed():3.0f}")
-
-    stdscr.addstr(1,16, f"Gear:    {gear.gear()}")
-    stdscr.addstr(1,0,  f"Throttle: {throttle.percent():3.0f}%")
-    
-    stdscr.addstr(3,0, "Temps (F):")
-
-    cht_temp = cht.temperature()
-    egt_temp = egt.temperature()
-
-    if temp_iterator % refresh_rate == 0:
-        cht_delta =  cht_temp - last_cht
-        if cht_delta < 1:
-            cht_delta = 0
-        egt_delta =  egt_temp - last_egt
-        if egt_delta < 1:
-            egt_delta = 0
-        temp_iterator = 0
-    else:
-        temp_iterator += 1
-
-    if cht_temp == 32:
-        stdscr.addstr(4,0, "CHT:   -")
-    else:
-        stdscr.addstr(4,0, f"CHT: {cht_temp:3.0f} {cht_delta:+5.1f}")
-
-    if egt_temp == 32:
-        stdscr.addstr(5,0, "EGT:   -")
-    else:
-        stdscr.addstr(5,0, f"EGT: {egt_temp:3.0f} {egt_delta:+5.1f}")
-
-    if accel._initialized:
-        stdscr.addstr(7,0, "Acceleration:")
-        stdscr.addstr(8,0, f"x: {accel.x():05.2f}")
-        stdscr.addstr(8,9, f"y: {accel.y():05.2f}")
-        stdscr.addstr(8,18, f"z: {accel.z():05.2f}")
-
-    try:
-        k = stdscr.getkey()
-        if k == "q":
-            curses.nocbreak()
-            stdscr.keypad(False)
-            curses.echo()
-            curses.endwin()
-
-            exit()
-
-    except Exception:
-        pass
-
-    stdscr.refresh()
-    time.sleep(refresh_interval)
-
-# shutdown
-curses.nocbreak()
-stdscr.keypad(False)
-curses.echo()
-curses.endwin()
+    _lcd = None
+    _status = {}
+    _status['rpms'] = 1200
+    _status['mph'] = 85
+    _status['throttle'] = 100
+    _status['gear'] = '4'
+    _status['egt_temp'] = 1600
+    _status['temp'] = 80
 
 
-def main(stdscr):
-    # Clear screen
-    stdscr.clear()
+    def __init__(self):
+        # Initialize the LCD class
+        # The lcd_rw parameter is optional.  You can omit the line below if you're only
+        # writing to the display.
+        self._lcd = characterlcd.Character_LCD_RGB(
+            self.lcd_rs,
+            self.lcd_en,
+            self.lcd_d4,
+            self.lcd_d5,
+            self.lcd_d6,
+            self.lcd_d7,
+            self.lcd_columns,
+            self.lcd_rows,
+            self.red,
+            self.green,
+            self.blue,
+        )
+        signal.signal(signal.SIGINT, self.signal_handler)
 
-    stdscr.refresh()
-    stdscr.getkey()
+        self.self_test(self._lcd)
 
-wrapper(main)
 
-curses.nocbreak()
-stdscr.keypad(False)
-curses.echo()
-curses.endwin()
+    def update(self, status:dict):
+        self._status = status
+
+    def start_display(self, update_frequency=0.25):
+        display_updater_thread = threading.Thread(target=self.display_updater, args=(self._lcd, update_frequency,))
+        display_updater_thread.start()
+
+    def display_updater(self, lcd, update_frequency=0.25):
+        blink = True
+        last_color = [0,0,0]
+
+        while True:
+            rpms = self._status.get('rpms')
+            mph = self._status.get('mph')
+            throttle = self._status.get('throttle')
+            gear = self._status.get('gear')
+            egt_temp = self._status.get('egt_temp')
+            temp = self._status.get('temp')
+        
+        #                     |---+----|----+----| |---+----|----+----|  |---+----|----+----|  |---+----|----+----|
+            lcd.message =   f"RPMs {rpms:5}  MPH: {mph:3}\nThrot:{throttle:3}%  Gear:  {gear}\nCHT:   {temp:3}  EGT:{egt_temp:4}\nx:-0.4 y:-1.1 z:-0.0"
+            if temp >= 350 and blink:
+                lcd.color = self.OFF
+            else:
+                lcd.color = self._get_color(temp)
+            blink = not blink
+
+            time.sleep(update_frequency)
+
+    def self_test(self, lcd):
+        lcd.clear()
+        lcd.color = self.OFF
+        # Set LCD color to red
+        #lcd.color = [100, 100, 100]
+        # wake & blink
+        lcd.color = self.RED  #|---+----|----+----|
+        lcd.message =  "\n The Ves-Pi Project" 
+        time.sleep(1)
+
+        # blink three times
+        lcd.color = self.OFF
+        time.sleep(.25)
+        lcd.color = self.RED
+        time.sleep(.25)
+        lcd.color = self.OFF
+        time.sleep(.25)
+        lcd.color = self.RED
+        time.sleep(.25)
+        lcd.clear()
+
+
+    def _get_color(self, temperature: float, min_temp=100, max_temp=325)->list:
+        '''Get a list with an RGB set in it for gradating from min_tmp to max_temp'''
+        red = 0
+        green = 0
+        blue = 0
+
+        # the max color value
+        max_color = 100
+        
+        if temperature < min_temp:
+            return (0, 0, max_color)
+        
+        if temperature > max_temp:
+            return (max_color, 0, 0)
+
+        # calculate the position between min and max temp a a value from 0 to 1
+        position = (temperature - min_temp) / (max_temp - min_temp)
+
+        ratio = 2 * position
+        red = int(max( 0, max_color * (ratio - 1)))
+        blue = int(max( 0, max_color * (1 - ratio)))
+        green = int(max(0, max_color - blue - red))
+
+        return [red, green, blue]
+
+    #graceful-ish shutdown
+    def signal_handler(self, sig, frame):
+        print('Exiting...')
+        time.sleep(1)
+        self._lcd.clear()
+        self._lcd.message = "Goodbye!"
+        time.sleep(1)
+        self._lcd.clear()
+        self._lcd.color = self.OFF
+
+##################################
+def temp_generator(d, max_temp=350, min_temp=60, temp_delta=10):
+    '''Dummy temperatue generator'''
+    #global temp
+    status = {}
+    status['rpms'] = 1200
+    status['mph'] = 85
+    status['throttle'] = 100
+    status['gear'] = 4
+    status['egt_temp'] = 1200
+    status['temp'] = min_temp
+
+    while True:
+        status['temp'] += temp_delta
+        print(f"temp: {status['temp']:5}")
+        d.update(status)
+        time.sleep(.5)
+
+        if status['temp'] > max_temp or status['temp'] <= min_temp:
+            temp_delta *= -1
+
+
+if __name__ == '__main__':
+    d = Dashboard()
+    d.start_display(0.5)
+    #d.update(status_dict)
+
+    # initialize and start the temp generator thread
+    temp = 80
+    temp_generator_thread = threading.Thread(target=temp_generator, args=(d,400,60,10,))
+    temp_generator_thread.start()
+
+    time.sleep(30)
+    exit()
